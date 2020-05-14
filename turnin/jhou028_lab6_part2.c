@@ -7,7 +7,7 @@
  *	code, is my own original work.
  */
 
-// Demo Link: https://drive.google.com/open?id=1OcnblHwFaqFoBeraOiyLv-z1FCWQWRyl
+// Demo Link: https://drive.google.com/open?id=1qIiP44YXvJ5YkxWRpQDHDtJSsXYlXiea
 
 #include <avr/io.h>
 #ifdef _SIMULATE_
@@ -131,14 +131,14 @@ int main(void) {
     DDRB = 0xFF; PORTB = 0x00;
 
     unsigned char i = 0;
-    tasks[i].state = Start;
+    tasks[i].state = PB_0;
     tasks[i].period = 300;
     tasks[i].elapsedTime = 0;
     tasks[i].TickFunction = &Tick;
     
     i++;
     tasks[i].state = 1;
-    tasks[i].period = 100;
+    tasks[i].period = 300;
     tasks[i].elapsedTime = 0;
     tasks[i].TickFunction = &Output;
 
