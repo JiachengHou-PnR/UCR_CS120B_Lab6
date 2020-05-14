@@ -76,7 +76,9 @@ void Tick() {
 
 }
 
-
+ void TimerISR() {
+	TimerFlag = 1;
+}
 
 int main(void) {
     /* Insert DDR and PORT initializations */
@@ -89,7 +91,7 @@ int main(void) {
     /* Insert your solution below */
 
     tmpB = 0x00;
-    state = Start;
+    state = PB_0;
 
     while (1) {
         Tick();

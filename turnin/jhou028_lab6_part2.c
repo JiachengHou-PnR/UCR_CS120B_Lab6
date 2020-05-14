@@ -16,90 +16,70 @@
 
 #include "timer.h"
 
-enum States {Start, PB_0, PB_1, PB_2, Press, Pause} state;
+const unsigned short TASKS_NUM = 2;
+const unsigned long TIMER_PERIOD = 20;
 
 unsigned char tmpA, tmpB;
-unsigned char direction, pressed;
+unsigned char direction;
 
-void Tick() {
+typedef struct task
+{
+    int state;
+    unsigned long period;
+    unsigned long elapsedTime;
+    int(*TickFunction)(int);
+} task;
+
+task tasks[2];
+
+void TimerISR() {
+    unsigned char i;
+    for (i = 0; i < TASKS_NUM; i++)
+    {
+        if (tasks[i].elapsedTime >= tasks[i].period)
+        {
+            tasks[i].state = tasks[i].TickFunction(tasks[i].state);
+            tasks[i].elapsedTime = 0;
+        }
+        tasks[i].elapsedTime += TIMER_PERIOD;
+    }
+}
+
+enum Tick_States {Start, PB_0, PB_1, PB_2, Press, Pause};
+
+
+
+int Tick(int state) {
 
     // Transitions
     switch (state)
     {
     case Start:
         tmpB = 0x00;
-        pressed = 0x00;
         state = PB_0;
         break;
 
     case PB_0:
         tmpB = 0x01;
-        if (pressed)
-        {
-            state = Press;
-            pressed = 0;
-        }
-        else
-        {
-            state = PB_1;
-        }
-        
+        state = tmpA ? Press : PB_1;
         break;
 
     case PB_1:
         tmpB = 0x02;
-        if (pressed)
-        {
-            state = Press;
-            pressed = 0;
-        }
-        else
-        {
-            state = (!direction) ? PB_2 : PB_0;
-        }
-        
+        state = tmpA ? Press : (!direction) ? PB_2 : PB_0;
         break;
 
     case PB_2:
         tmpB = 0x04;
-        if (pressed)
-        {
-            state = Press;
-            pressed = 0;
-        }
-        else
-        {
-            state = PB_1;
-        }
-        
+        state = tmpA ? Press : PB_1;
         break;
 
     case Press:
-        //pressed = 0x00;
-        if (pressed)
-        {
-            state = Press;
-            pressed = 0;
-        }
-        else
-        {
-            state = Pause;
-        }
-        
+        state = tmpA ? Press : Pause;
         break;
     
     case Pause:
-        //pressed = 0x00;
-        if (pressed)
-        {
-            state = PB_0;
-            pressed = 0;
-        }
-        else
-        {
-            state = Pause;
-        }
-        
+        state = tmpA ? PB_0 : Pause;
         break;        
     
     default:
@@ -127,55 +107,49 @@ void Tick() {
         break;
 
     case Press:
-        //pressed = 0;
         break;
     
     case Pause:
-        //pressed = 0;
         break;   
     
     default:
         break;
     } // State actions
 
+    return state;
 }
 
-void Button() {
-    pressed = tmpA ? 1 : pressed;
+int Output(int state) {
+    PORTB = tmpB;
+    return 1;
 }
+
 
 int main(void) {
     /* Insert DDR and PORT initializations */
     DDRA = 0x00; PORTA = 0xFF;
     DDRB = 0xFF; PORTB = 0x00;
 
-    unsigned long tick_elapsedTime = 0;
-    const unsigned long TIMER_PERIOD = 3;
+    unsigned char i = 0;
+    tasks[i].state = Start;
+    tasks[i].period = 300;
+    tasks[i].elapsedTime = 0;
+    tasks[i].TickFunction = &Tick;
+    
+    i++;
+    tasks[i].state = 1;
+    tasks[i].period = 100;
+    tasks[i].elapsedTime = 0;
+    tasks[i].TickFunction = &Output;
 
     TimerSet(TIMER_PERIOD);
     TimerOn();
 
     /* Insert your solution below */
     tmpB = 0x00;
-    state = Start;
 
     while (1) {
         tmpA = ~PINA & 0x01;
-        
-        Button();
-
-        if (tick_elapsedTime >= 300)
-        {
-            PORTB = tmpB | (pressed << 5);
-            Tick();
-
-            tick_elapsedTime = 0;
-        }
-
-        while (!TimerFlag); // Wait TIMER_PERIOD ms
-        TimerFlag = 0;
-
-         tick_elapsedTime += TIMER_PERIOD;
     }
     
     return 1;
